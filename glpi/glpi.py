@@ -5,37 +5,41 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
+
+
 class GLPIItem(object):
     _data = {}
     glpi = None
     item_type = None
     save_data = {}
+
     def __init__(self, data, glpi, item_type):
         self._data = data
         self.glpi = glpi
         self.item_type = item_type
+
     def __getattr__(self, key):
         return self._data[key]
+
     def __setattr__(self, key, value):
         if key in ['_data','glpi','save_data', 'item_type'] :
             super(GLPIItem, self).__setattr__(key, value)
             return
         self._data[key] = value
         self.save_data[key] = value
+
     def __str__(self):
         return str(self._data)
+
     def __repr__(self):
         return str(self._data)
+
     def save(self):
         data = {'input': self.save_data}
         result = self.glpi._get_json('/{key}/{item_id}'.format(key=self.item_type, item_id=self.id,), 'PUT', data)
-        #print(result)
         if isinstance(result, list):
             if 'message' in result[0] and result[0]['message'] != '':
                 raise GLPIException(result[0]['message']) 
-        
-
-
 
 
 class SearchItemManager(object):
@@ -50,8 +54,7 @@ class SearchItemManager(object):
     
     def __init__(self, item_type, glpi):
         self.item_type = item_type
-        self.glpi = glpi
-    
+        self.glpi = glpi    
 
     def _get_forcedisplay(self):        
         forcedisplay = ''
@@ -60,7 +63,11 @@ class SearchItemManager(object):
             forcedisplay += '&forcedisplay[{0}]={1}'.format(count, value)
             count += 1
         return forcedisplay
-    def find(self, criteria=None, *args, **kwargs): 
+    
+    def all(self):
+        return self.filter()
+    
+    def filter(self, criteria=None, *args, **kwargs): 
         if not criteria:
             criteria = GLPISearchCriteria()
             for k, v in kwargs.items():            
@@ -70,8 +77,7 @@ class SearchItemManager(object):
                     field=self.fields[k],
                     value=v,
                     searchtype=GLPISearchCriteria.SEARCH_TYPE_CONTAINS,
-                )  
-                 
+                )                   
         result = self.glpi._get_json(
             '/search/{key}/?expand_drodpowns=true&range=0-1000&{criteria}{forcedisplay}'.format(
                 key=self.item_type,
@@ -85,8 +91,7 @@ class SearchItemManager(object):
                 for k, v in self.fields.items():
                     if str(v) in item:
                         item[k] = item[str(v)] 
-                glpiitems.append(GLPIItem(item, self.glpi, self.item_type))
-            
+                glpiitems.append(GLPIItem(item, self.glpi, self.item_type))            
         return glpiitems
                    
 
@@ -110,12 +115,13 @@ class SearchComputerManager(SearchItemManager):
             otherserial= 6,
             status_name= 31,
             model_name= 40,
+            mac_address=21,
         )   
         self.fields.update(z) 
 
-class GLPI(object): 
-    
 
+
+class GLPI(object):  
     def __init__(self, url_rest, user_token, app_token):
         self.url_rest = url_rest
         self.user_token = user_token
@@ -125,7 +131,6 @@ class GLPI(object):
         self.states = SearchItemManager('State', self)
         self.locations = SearchItemManager('Location', self)
         self._session = None
-
 
     def _get_session(self):
         if not self._session:
@@ -145,10 +150,8 @@ class GLPI(object):
             self._session.headers.update({'Session-Token': _session_token})
         return self._session
 
-
     def _get_json(self, url, method='GET',data=None):
         full_url = self.url_rest + url
-        #print(('full_url',full_url))
         if data is None:
             req = Request(method, full_url)
         elif isinstance(data, str):
@@ -161,8 +164,10 @@ class GLPI(object):
         result = json.loads(resp.text)        
         return result
     
+
 class GLPIException(Exception):
     pass
+
 
 class GLPISessionErrorException(GLPIException):
     pass
@@ -179,11 +184,11 @@ class GLPISearchCriteria(object):
     SEARCH_TYPE_MORE_THAN = 'morethan'
     SEARCH_TYPE_UNDER = 'under'
     SEARCH_TYPE_NOT_UNDER = 'notunder'
+
     def __init__(self, logical_operator=None, itemtype=None, searchtype=None, value=None, field=SearchItemManager.fields['name']):
         self.rules = []
         if logical_operator and itemtype and searchtype and value:
-            self.add_rule(logical_operator, itemtype, searchtype, value, field)
-        
+            self.add_rule(logical_operator, itemtype, searchtype, value, field)        
         
     def add_rule(self, logical_operator, itemtype, searchtype, value, field=SearchItemManager.fields['name']):
         self.rules.append({
