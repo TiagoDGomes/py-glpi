@@ -45,3 +45,10 @@ computer.name = 'This is my PC'
 computer.states_id = 2
 computer.save()
 ```
+
+* Tickets:
+```python
+tickets = glpi.tickets.filter(name='problem')
+for ticket in tickets:
+    print(ticket)
+```
