@@ -118,7 +118,7 @@ class GLPI(object):
         self.user_token = user_token
         self.app_token = app_token
         self.computers = SearchItemManager('Computer', self, FIELDS_SEARCH_COMPUTER)
-        self.tickets = SearchItemManager('Computer', self)
+        self.tickets = SearchItemManager('Ticket', self)
         self.states = SearchItemManager('State', self)
         self.locations = SearchItemManager('Location', self)
         self._session = None
