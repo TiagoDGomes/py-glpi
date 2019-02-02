@@ -39,3 +39,9 @@ computers = glpi.computers.filter(criteria=my_criteria)
 for computer in computers:
     print (computer)
 ```
+* Basic save:
+```python
+computer.name = 'This is my PC'
+computer.states_id = 2
+computer.save()
+```
