@@ -9,7 +9,8 @@ FIELDS_SEARCH_COMMON = dict(
     name=1,
     id=2,
     entity_name=80,
-)        
+)   
+     
 FIELDS_SEARCH_COMPUTER = dict(
     location_complete_name=3,
     otherserial=6,
@@ -17,6 +18,11 @@ FIELDS_SEARCH_COMPUTER = dict(
     model_name=40,
     mac_address=21,
 )   
+
+FIELDS_SEARCH_TICKET = dict(
+    urgency=3,
+    users_id_recipient=4,
+)
 
 class GLPIItem(object):
     _data = {}
@@ -117,10 +123,10 @@ class GLPI(object):
         self.url_rest = url_rest
         self.user_token = user_token
         self.app_token = app_token
-        self.tickets = SearchItemManager('Ticket', self, {'a':1})
+        self.tickets = SearchItemManager('Ticket', self,FIELDS_SEARCH_TICKET)
         self.computers = SearchItemManager('Computer', self, FIELDS_SEARCH_COMPUTER)
-        self.states = SearchItemManager('State', self)
-        self.locations = SearchItemManager('Location', self)
+        self.states = SearchItemManager('State', self,)
+        self.locations = SearchItemManager('Location', self,)
         self._session = None
 
     def _get_session(self):
