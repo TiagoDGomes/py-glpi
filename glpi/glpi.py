@@ -1,6 +1,7 @@
 from requests import Request, Session
 import json
 import warnings
+import copy
 
 warnings.filterwarnings("ignore")
 
@@ -54,14 +55,13 @@ class GLPIItem(object):
 
 class SearchItemManager(object):
     item_type = None
-    _data = None
     glpi = None
-    all_fields = FIELDS_SEARCH_COMMON
+    all_fields = FIELDS_SEARCH_COMMON.copy()
     def __init__(self, item_type, glpi, fields={}):
         self.item_type = item_type
         self.glpi = glpi 
-        self.fields = FIELDS_SEARCH_COMMON
-        self.fields.update(fields)
+        self.fields = fields
+        self.fields.update(FIELDS_SEARCH_COMMON)
         self.all_fields.update(fields)
 
     def _get_forcedisplay(self):        
@@ -117,8 +117,8 @@ class GLPI(object):
         self.url_rest = url_rest
         self.user_token = user_token
         self.app_token = app_token
+        self.tickets = SearchItemManager('Ticket', self, {'a':1})
         self.computers = SearchItemManager('Computer', self, FIELDS_SEARCH_COMPUTER)
-        self.tickets = SearchItemManager('Ticket', self)
         self.states = SearchItemManager('State', self)
         self.locations = SearchItemManager('Location', self)
         self._session = None
