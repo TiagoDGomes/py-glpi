@@ -25,14 +25,14 @@ my_criteria = GLPISearchCriteria(
     logical_operator=GLPISearchCriteria.LINK_LOGICAL_OPERATOR_AND,
     itemtype=GLPISearchCriteria.ITEM_TYPE_COMPUTER,
     searchtype=GLPISearchCriteria.SEARCH_TYPE_CONTAINS,
-    field=SearchItemManager.fields['name'],
+    field=glpi.computers.fields['name'],
     value='My PC',
 )
 my_criteria.add_rule(    
     logical_operator=GLPISearchCriteria.LINK_LOGICAL_OPERATOR_AND,
     itemtype=GLPISearchCriteria.ITEM_TYPE_COMPUTER,
     searchtype=GLPISearchCriteria.SEARCH_TYPE_CONTAINS,
-    field=SearchItemManager.fields['mac_address'],
+    field=glpi.computers.fields['mac_address'],
     value='10:23:45:c6:d7:e8',
 )
 computers = glpi.computers.filter(criteria=my_criteria)
