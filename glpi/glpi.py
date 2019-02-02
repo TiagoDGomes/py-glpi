@@ -4,8 +4,18 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-
-
+FIELDS_SEARCH_COMMON = dict(
+    name=1,
+    id=2,
+    entity_name=80,
+)        
+FIELDS_SEARCH_COMPUTER = dict(
+    location_complete_name=3,
+    otherserial=6,
+    status_name=31,
+    model_name=40,
+    mac_address=21,
+)   
 
 class GLPIItem(object):
     _data = {}
@@ -18,7 +28,7 @@ class GLPIItem(object):
         self.glpi = glpi
         self.item_type = item_type
 
-    def __getattr__(self, key):
+    def __getattr__(self, key):        
         return self._data[key]
 
     def __setattr__(self, key, value):
@@ -46,15 +56,13 @@ class SearchItemManager(object):
     item_type = None
     _data = None
     glpi = None
-    fields = dict(
-        name=1,
-        id=2,
-        entity_name=80,
-    )        
-    
-    def __init__(self, item_type, glpi):
+    all_fields = FIELDS_SEARCH_COMMON
+    def __init__(self, item_type, glpi, fields={}):
         self.item_type = item_type
-        self.glpi = glpi    
+        self.glpi = glpi 
+        self.fields = FIELDS_SEARCH_COMMON
+        self.fields.update(fields)
+        self.all_fields.update(fields)
 
     def _get_forcedisplay(self):        
         forcedisplay = ''
@@ -86,7 +94,7 @@ class SearchItemManager(object):
                 )
             )
         glpiitems = []
-        if result['count']>0:            
+        if result['count'] > 0:            
             for item in result['data']:
                 for k, v in self.fields.items():
                     if str(v) in item:
@@ -104,30 +112,13 @@ class SearchItemManager(object):
         return r
 
 
-
-
-class SearchComputerManager(SearchItemManager):    
-    def __init__(self, glpi):
-        self.item_type = 'Computer'
-        self.glpi = glpi
-        z = dict(
-            location_complete_name=3,
-            otherserial= 6,
-            status_name= 31,
-            model_name= 40,
-            mac_address=21,
-        )   
-        self.fields.update(z) 
-
-
-
 class GLPI(object):  
     def __init__(self, url_rest, user_token, app_token):
         self.url_rest = url_rest
         self.user_token = user_token
         self.app_token = app_token
-        self.computers = SearchComputerManager(self)
-        self.tickets = SearchItemManager('Ticket', self)
+        self.computers = SearchItemManager('Computer', self, FIELDS_SEARCH_COMPUTER)
+        self.tickets = SearchItemManager('Computer', self)
         self.states = SearchItemManager('State', self)
         self.locations = SearchItemManager('Location', self)
         self._session = None
@@ -184,13 +175,16 @@ class GLPISearchCriteria(object):
     SEARCH_TYPE_MORE_THAN = 'morethan'
     SEARCH_TYPE_UNDER = 'under'
     SEARCH_TYPE_NOT_UNDER = 'notunder'
+    ITEM_TYPE_COMPUTER = 'Computer'
+    ITEM_TYPE_TICKET = 'Ticket'
+    ITEM_TYPE_STATE = 'State'
 
-    def __init__(self, logical_operator=None, itemtype=None, searchtype=None, value=None, field=SearchItemManager.fields['name']):
+    def __init__(self, logical_operator=None, itemtype=None, searchtype=None, value=None, field=SearchItemManager.all_fields['name']):
         self.rules = []
         if logical_operator and itemtype and searchtype and value:
             self.add_rule(logical_operator, itemtype, searchtype, value, field)        
         
-    def add_rule(self, logical_operator, itemtype, searchtype, value, field=SearchItemManager.fields['name']):
+    def add_rule(self, logical_operator, itemtype, searchtype, value, field=SearchItemManager.all_fields['name']):
         self.rules.append({
             'link': logical_operator,
             'itemtype': itemtype,
@@ -207,3 +201,5 @@ class GLPISearchCriteria(object):
                 result += '&criteria[{0}][{1}]={2}'.format(count, item, value)
             count += 1
         return result
+    def __str__(self):
+        return str(self.rules)
