@@ -2,6 +2,7 @@ from requests import Request, Session
 import json
 import warnings
 import copy
+import sys 
 
 warnings.filterwarnings("ignore")
 
@@ -35,8 +36,28 @@ class GLPIItem(object):
         self.glpi = glpi
         self.item_type = item_type
 
-    def __getattr__(self, key):        
-        return self._data[key]
+    def __getattr__(self, key):
+        ret = None        
+        try:
+            ret = self._data[key]
+        except:            
+            key_sub = '{0}_id'.format(key)
+            rel_id = self._data[key_sub]
+            if isinstance(rel_id, int):
+                cmd = 'ret = self.glpi.{0}.get({1})'.format(key, rel_id) 
+            else:           
+                criteria = GLPISearchCriteria()
+                for v in rel_id:            
+                    criteria.add_rule(
+                        logical_operator=GLPISearchCriteria.LINK_LOGICAL_OPERATOR_OR,
+                        itemtype=key,
+                        field=2,
+                        value=v,
+                        searchtype=GLPISearchCriteria.SEARCH_TYPE_EQUALS,
+                    )  
+                cmd = 'ret = self.glpi.{0}.filter(criteria=criteria)'.format(key)    
+            exec cmd
+        return ret
 
     def __setattr__(self, key, value):
         if key in ['_data','glpi','save_data', 'item_type'] :
@@ -118,7 +139,8 @@ class SearchItemManager(object):
         return r
 
 
-class GLPI(object):  
+class GLPI(object): 
+    debug = False 
     def __init__(self, url_rest, user_token, app_token):
         self.url_rest = url_rest
         self.user_token = user_token
@@ -127,6 +149,7 @@ class GLPI(object):
         self.computers = SearchItemManager('Computer', self, FIELDS_SEARCH_COMPUTER)
         self.states = SearchItemManager('State', self,)
         self.locations = SearchItemManager('Location', self,)
+        self.domains = SearchItemManager('Domain', self,)
         self._session = None
 
     def _get_session(self):
@@ -149,6 +172,8 @@ class GLPI(object):
 
     def _get_json(self, url, method='GET',data=None):
         full_url = self.url_rest + url
+        if self.debug:
+            sys.stderr.write('\nFetch URL: ' + full_url + '\n')
         if data is None:
             req = Request(method, full_url)
         elif isinstance(data, str):
