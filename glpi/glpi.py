@@ -24,7 +24,7 @@ FIELDS_SEARCH_TICKET = dict(
     urgency=3,
     users_id_recipient=4,
 )
-_GLPIITEMS_KEYS_IGNORE = ['_data','glpi','save_data', 'item_type', '_f_filter']
+_GLPIITEMS_KEYS_IGNORE = ['_data','glpi','save_data', 'item_type', '_f_filter', ]
 class GLPIItem(object):
     _data = {}
     glpi = None
@@ -44,18 +44,16 @@ class GLPIItem(object):
             return
         ret = None        
         try:
-            ret = self._data[key]
-        except:            
-            key_sub = '{0}_id'.format(key)
-            try:
-                rel_id = self._data[key_sub]
-            except KeyError:                
-                if self._f_filter:
-                    exec 'x = self.glpi.{item_type}s.get(self.id, raw_data=True)'.format(item_type=self.item_type.lower())
-                    self._data = x
-                    rel_id = self._data[key_sub]
-                else:
-                    raise KeyError(key)
+            return self._data[key]
+        except KeyError:  # check if updated
+            if self._f_filter:
+                exec 'x = self.glpi.{item_type}s.get(self.id, raw_data=True)'.format(item_type=self.item_type.lower())
+                self._data.update(x)
+                self._f_filter = False
+        try:
+            return self._data[key]
+        except KeyError:            
+            rel_id = self._data['{0}_id'.format(key)]            
             if isinstance(rel_id, int):
                 if rel_id == 0:
                     return []    
