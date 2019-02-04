@@ -25,24 +25,25 @@ my_criteria = GLPISearchCriteria(
     logical_operator=GLPISearchCriteria.LINK_LOGICAL_OPERATOR_AND,
     itemtype=GLPISearchCriteria.ITEM_TYPE_COMPUTER,
     searchtype=GLPISearchCriteria.SEARCH_TYPE_CONTAINS,
-    field=glpi.computers.fields['name'],
+    field=FIELDS_SEARCH_COMPUTER['name'],
     value='My PC',
 )
 my_criteria.add_rule(    
     logical_operator=GLPISearchCriteria.LINK_LOGICAL_OPERATOR_AND,
     itemtype=GLPISearchCriteria.ITEM_TYPE_COMPUTER,
     searchtype=GLPISearchCriteria.SEARCH_TYPE_CONTAINS,
-    field=glpi.computers.fields['mac_address'],
+    field=FIELDS_SEARCH_COMPUTER['mac_address'],
     value='10:23:45:c6:d7:e8',
 )
 computers = glpi.computers.filter(criteria=my_criteria)
 for computer in computers:
-    print (computer)
+    print (computer.name)
+    print (computer.locations.name)
 ```
 * Basic save:
 ```python
 computer.name = 'This is my PC'
-computer.states_id = 2
+computer.states_id = 2 # sorry for this. Save object is not implemented.
 computer.save()
 ```
 
