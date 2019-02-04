@@ -24,40 +24,47 @@ FIELDS_SEARCH_TICKET = dict(
     urgency=3,
     users_id_recipient=4,
 )
-_GLPIITEMS_KEYS_IGNORE = ['_data','glpi','save_data', 'item_type', '_f_filter', ]
+_GLPIITEMS_KEYS_IGNORE = ['_data','glpi','save_data', 'item_type', '_f_filter', '_updated']
 class GLPIItem(object):
     _data = {}
     glpi = None
     item_type = None
     save_data = {}
     _f_filter = None
+    _updated = False
 
     def __init__(self, data, glpi, item_type, f_filter=False):
         self._data = data
         self.glpi = glpi
         self.item_type = item_type
         self._f_filter = f_filter
+        self._updated = False
 
     def __getattr__(self, key):
-        if key in _GLPIITEMS_KEYS_IGNORE:
-            super(GLPIItem, self).__getattr__(key)
+        if key in _GLPIITEMS_KEYS_IGNORE:          
+            super(GLPIItem, self).__getattribute__(key)
             return
         ret = None        
+        try:    
+            return self._data[key]
+        except:  # check if updated
+            if self._f_filter and not self._updated:
+                field_id = str(FIELDS_SEARCH_COMMON['id'])
+                if field_id in self._data:
+                    item_id = self._data[field_id]
+                else:
+                    item_id = self._data['id']                
+                refresh_data = self.glpi.__getattribute__(self.item_type.lower() + 's').get(item_id, raw_data=True)
+                self._data.update(refresh_data)   
+                self._updated = True 
         try:
             return self._data[key]
-        except KeyError:  # check if updated
-            if self._f_filter:
-                exec 'x = self.glpi.{item_type}s.get(self.id, raw_data=True)'.format(item_type=self.item_type.lower())
-                self._data.update(x)
-                self._f_filter = False
-        try:
-            return self._data[key]
-        except KeyError:            
+        except KeyError:         
             rel_id = self._data['{0}_id'.format(key)]            
             if isinstance(rel_id, int):
                 if rel_id == 0:
                     return []    
-                cmd = 'ret = self.glpi.{0}.get({1})'.format(key, rel_id) 
+                ret = self.glpi.__getattribute__(key).get(rel_id)
             else:           
                 criteria = GLPISearchCriteria()
                 for v in rel_id:            
@@ -68,8 +75,8 @@ class GLPIItem(object):
                         value=v,
                         searchtype=GLPISearchCriteria.SEARCH_TYPE_EQUALS,
                     )  
-                cmd = 'ret = self.glpi.{0}.filter(criteria=criteria)'.format(key)    
-            exec cmd
+                ret = self.glpi.__getattribute__(key).filter(criteria=criteria)
+            
         return ret
 
     def __setattr__(self, key, value):
@@ -148,11 +155,11 @@ class SearchItemManager(object):
 
     def get(self, item_id, raw_data=False,):
         result = self.glpi._get_json('/{key}/{item_id}'.format(key=self.item_type, item_id=item_id,) )
-        if self.glpi.debug:
-            sys.stderr.write("\nSearchItemManager.get: " + str(result))
+        self.glpi._debug("\nSearchItemManager.get: " + str(result))
         if raw_data:
             return result
         if isinstance(result, list):
+            self.glpi._debug("\nSearchItemManager.get Error: " + str(result[1]))
             raise GLPIException(result[1]) 
         r = GLPIItem(result, self.glpi, self.item_type, f_filter=False)
         return r
@@ -172,7 +179,10 @@ class GLPI(object):
         self.manufacturers = SearchItemManager('Manufacturer', self,)
         self.computermodels = SearchItemManager('ComputerModel', self,)
         self.networks = SearchItemManager('Network', self,)
+        self.entities = SearchItemManager('Entity', self,)
+        self.calendars = SearchItemManager('Calendar', self,)
         self._session = None
+
 
     def _get_session(self):
         if not self._session:
@@ -194,8 +204,7 @@ class GLPI(object):
 
     def _get_json(self, url, method='GET',data=None):
         full_url = self.url_rest + url
-        if self.debug:
-            sys.stderr.write('\nFetch URL: ' + full_url + '\n')
+        self._debug('\nFetch URL: ' + full_url + '\n')
         if data is None:
             req = Request(method, full_url)
         elif isinstance(data, str):
@@ -207,7 +216,10 @@ class GLPI(object):
         resp = s.send(prepped,verify=False)
         result = json.loads(resp.text)        
         return result
-    
+    def _debug(self, text):
+        if self.debug:
+            print("\n")
+            print(text)
 
 class GLPIException(Exception):
     pass
@@ -234,6 +246,9 @@ class GLPISearchCriteria(object):
     ITEM_TYPE_DOMAIN = 'Domain'
     ITEM_TYPE_COMPUTER_MODEL = 'ComputerModel'
     ITEM_TYPE_MANUFACTURER = 'Manufacturer'
+    ITEM_TYPE_NETWORK = 'Network'
+    ITEM_TYPE_ENTITY = 'Entity'
+    ITEM_TYPE_CALENDAR = 'Calendar'
 
     def __init__(self, logical_operator=None, itemtype=None, searchtype=None, value=None, field=SearchItemManager.all_fields['name']):
         self.rules = []
