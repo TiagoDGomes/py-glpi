@@ -24,9 +24,8 @@ FIELDS_SEARCH_TICKET = dict(
     urgency=3,
     users_id_recipient=4,
 )
-_GLPIITEMS_KEYS_IGNORE = ['_data','glpi','save_data', 'item_type', '_f_filter', '_updated']
+
 class GLPIItem(object):
-    _data = {}
     glpi = None
     item_type = None
     save_data = {}
@@ -34,33 +33,30 @@ class GLPIItem(object):
     _updated = False
 
     def __init__(self, data, glpi, item_type, f_filter=False):
-        self._data = data
+        self.__dict__.update(data)
         self.glpi = glpi
         self.item_type = item_type
         self._f_filter = f_filter
         self._updated = False
 
     def __getattr__(self, key):
-        if key in _GLPIITEMS_KEYS_IGNORE:          
-            super(GLPIItem, self).__getattribute__(key)
-            return
         ret = None        
         try:    
-            return self._data[key]
+            return self.__dict__[key]
         except:  # check if updated
             if self._f_filter and not self._updated:
                 field_id = str(FIELDS_SEARCH_COMMON['id'])
-                if field_id in self._data:
-                    item_id = self._data[field_id]
+                if field_id in self.__dict__:
+                    item_id = self.__dict__[field_id]
                 else:
-                    item_id = self._data['id']                
+                    item_id = self.__dict__[u'id']
                 refresh_data = self.glpi.__getattribute__(self.item_type.lower() + 's').get(item_id, raw_data=True)
-                self._data.update(refresh_data)   
+                self.__dict__.update(refresh_data)   
                 self._updated = True 
         try:
-            return self._data[key]
+            return self.__dict__[key]
         except KeyError:         
-            rel_id = self._data['{0}_id'.format(key)]            
+            rel_id = self.__dict__['{0}_id'.format(key)]            
             if isinstance(rel_id, int):
                 if rel_id == 0:
                     return []    
@@ -80,17 +76,14 @@ class GLPIItem(object):
         return ret
 
     def __setattr__(self, key, value):
-        if key in _GLPIITEMS_KEYS_IGNORE:
-            super(GLPIItem, self).__setattr__(key, value)
-            return
-        self._data[key] = value
+        self.__dict__[key] = value
         self.save_data[key] = value
 
     def __str__(self):
-        return str(self._data)
+        return str(self.__dict__)
 
     def __repr__(self):
-        return str(self._data)
+        return str(self.__dict__)
 
     def save(self):
         data = {'input': self.save_data}
