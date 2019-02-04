@@ -24,26 +24,41 @@ FIELDS_SEARCH_TICKET = dict(
     urgency=3,
     users_id_recipient=4,
 )
-
+_GLPIITEMS_KEYS_IGNORE = ['_data','glpi','save_data', 'item_type', '_f_filter']
 class GLPIItem(object):
     _data = {}
     glpi = None
     item_type = None
     save_data = {}
+    _f_filter = None
 
-    def __init__(self, data, glpi, item_type):
+    def __init__(self, data, glpi, item_type, f_filter=False):
         self._data = data
         self.glpi = glpi
         self.item_type = item_type
+        self._f_filter = f_filter
 
     def __getattr__(self, key):
+        if key in _GLPIITEMS_KEYS_IGNORE:
+            super(GLPIItem, self).__getattr__(key)
+            return
         ret = None        
         try:
             ret = self._data[key]
         except:            
             key_sub = '{0}_id'.format(key)
-            rel_id = self._data[key_sub]
+            try:
+                rel_id = self._data[key_sub]
+            except KeyError:                
+                if self._f_filter:
+                    exec 'x = self.glpi.{item_type}s.get(self.id, raw_data=True)'.format(item_type=self.item_type.lower())
+                    self._data = x
+                    rel_id = self._data[key_sub]
+                else:
+                    raise KeyError(key)
             if isinstance(rel_id, int):
+                if rel_id == 0:
+                    return []    
                 cmd = 'ret = self.glpi.{0}.get({1})'.format(key, rel_id) 
             else:           
                 criteria = GLPISearchCriteria()
@@ -60,7 +75,7 @@ class GLPIItem(object):
         return ret
 
     def __setattr__(self, key, value):
-        if key in ['_data','glpi','save_data', 'item_type'] :
+        if key in _GLPIITEMS_KEYS_IGNORE:
             super(GLPIItem, self).__setattr__(key, value)
             return
         self._data[key] = value
@@ -102,7 +117,7 @@ class SearchItemManager(object):
     def all(self):
         return self.filter()
     
-    def filter(self, criteria=None, *args, **kwargs): 
+    def filter(self, criteria=None, raw_data=False, *args, **kwargs): 
         if not criteria:
             criteria = GLPISearchCriteria()
             for k, v in kwargs.items():            
@@ -120,22 +135,28 @@ class SearchItemManager(object):
                 forcedisplay=self._get_forcedisplay(),
                 )
             )
+        if raw_data:
+            return result
+
         glpiitems = []
         if result['count'] > 0:            
             for item in result['data']:
                 for k, v in self.fields.items():
                     if str(v) in item:
                         item[k] = item[str(v)] 
-                glpiitems.append(GLPIItem(item, self.glpi, self.item_type))            
+                glpiitems.append(GLPIItem(item, self.glpi, self.item_type, f_filter=True))            
         return glpiitems
                    
 
-    def get(self, item_id):
+    def get(self, item_id, raw_data=False,):
         result = self.glpi._get_json('/{key}/{item_id}'.format(key=self.item_type, item_id=item_id,) )
+        if self.glpi.debug:
+            sys.stderr.write("\nSearchItemManager.get: " + str(result))
+        if raw_data:
+            return result
         if isinstance(result, list):
             raise GLPIException(result[1]) 
-        r = GLPIItem(result, self.glpi, self.item_type)
-        #print (result)
+        r = GLPIItem(result, self.glpi, self.item_type, f_filter=False)
         return r
 
 
@@ -150,6 +171,9 @@ class GLPI(object):
         self.states = SearchItemManager('State', self,)
         self.locations = SearchItemManager('Location', self,)
         self.domains = SearchItemManager('Domain', self,)
+        self.manufacturers = SearchItemManager('Manufacturer', self,)
+        self.computermodels = SearchItemManager('ComputerModel', self,)
+        self.networks = SearchItemManager('Network', self,)
         self._session = None
 
     def _get_session(self):
@@ -209,6 +233,9 @@ class GLPISearchCriteria(object):
     ITEM_TYPE_COMPUTER = 'Computer'
     ITEM_TYPE_TICKET = 'Ticket'
     ITEM_TYPE_STATE = 'State'
+    ITEM_TYPE_DOMAIN = 'Domain'
+    ITEM_TYPE_COMPUTER_MODEL = 'ComputerModel'
+    ITEM_TYPE_MANUFACTURER = 'Manufacturer'
 
     def __init__(self, logical_operator=None, itemtype=None, searchtype=None, value=None, field=SearchItemManager.all_fields['name']):
         self.rules = []
