@@ -45,19 +45,15 @@ class GLPIItem(object):
         self._updated = False
 
     def __getattr__(self, key):
-        ret = None        
-        try:    
-            return self.__dict__[key]
-        except:  # check if updated
-            if self._f_filter and not self._updated:
-                field_id = str(FIELDS_SEARCH_COMMON['id'])
-                if field_id in self.__dict__:
-                    item_id = self.__dict__[field_id]
-                else:
-                    item_id = self.__dict__[u'id']
-                refresh_data = self.glpi.__getattribute__(self.item_type.lower() + 's').get(item_id, raw_data=True)
-                self.__dict__.update(refresh_data)   
-                self._updated = True 
+        if self._f_filter and not self._updated:
+            field_id = str(FIELDS_SEARCH_COMMON['id'])
+            if field_id in self.__dict__:
+                item_id = self.__dict__[field_id]
+            else:
+                item_id = self.__dict__[u'id']
+            refresh_data = self.glpi.__getattribute__(self.item_type.lower() + 's').get(item_id, raw_data=True)
+            self.__dict__.update(refresh_data)   
+            self._updated = True 
         try:
             return self.__dict__[key]
         except KeyError:         
@@ -76,8 +72,7 @@ class GLPIItem(object):
                         value=v,
                         searchtype=GLPISearchCriteria.SEARCH_TYPE_EQUALS,
                     )  
-                return self.glpi.__getattribute__(key).filter(criteria=criteria)            
-        return ret
+                return self.glpi.__getattribute__(key).filter(criteria=criteria)
 
     def __setattr__(self, key, value):
         self.__dict__[key] = value
@@ -137,6 +132,8 @@ class SearchItemManager(object):
                 forcedisplay=self._get_forcedisplay(),
                 )
             )
+        self.glpi._debug("\nSearchItemManager.filter: {0}".format(str(result)))
+        
         if raw_data:
             return result
 
@@ -152,7 +149,7 @@ class SearchItemManager(object):
 
     def get(self, item_id, raw_data=False,):
         result = self.glpi._get_json('/{key}/{item_id}'.format(key=self.item_type, item_id=item_id,) )
-        self.glpi._debug("\nSearchItemManager.get: " + str(result))
+        self.glpi._debug("\nSearchItemManager.get:  {0}".format(str(result)))
         if raw_data:
             return result
         if isinstance(result, list):
@@ -269,5 +266,6 @@ class GLPISearchCriteria(object):
                 result += '&criteria[{0}][{1}]={2}'.format(count, item, value)
             count += 1
         return result
+        
     def __str__(self):
         return str(self.rules)
