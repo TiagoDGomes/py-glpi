@@ -75,6 +75,9 @@ class GLPIItem(object):
                 return self.glpi.__getattribute__(key).filter(criteria=criteria)
 
     def __setattr__(self, key, value):
+        if key in ['_data','glpi','save_data', 'item_type', '_f_filter', '_updated' ]:
+            super(GLPIItem, self).__setattr__(key, value)
+            return
         self.__dict__[key] = value
         self.save_data[key] = value
 
@@ -266,6 +269,6 @@ class GLPISearchCriteria(object):
                 result += '&criteria[{0}][{1}]={2}'.format(count, item, value)
             count += 1
         return result
-        
+
     def __str__(self):
         return str(self.rules)
