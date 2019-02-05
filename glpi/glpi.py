@@ -4,14 +4,17 @@ import warnings
 import copy
 import sys 
 
+
 warnings.filterwarnings("ignore")
+
 
 FIELDS_SEARCH_COMMON = dict(
     name=1,
     id=2,
     entity_name=80,
 )   
-     
+
+   
 FIELDS_SEARCH_COMPUTER = dict(
     location_complete_name=3,
     otherserial=6,
@@ -20,10 +23,12 @@ FIELDS_SEARCH_COMPUTER = dict(
     mac_address=21,
 )   
 
+
 FIELDS_SEARCH_TICKET = dict(
     urgency=3,
     users_id_recipient=4,
 )
+
 
 class GLPIItem(object):
     glpi = None
@@ -60,7 +65,7 @@ class GLPIItem(object):
             if isinstance(rel_id, int):
                 if rel_id == 0:
                     return []    
-                ret = self.glpi.__getattribute__(key).get(rel_id)
+                return self.glpi.__getattribute__(key).get(rel_id)
             else:           
                 criteria = GLPISearchCriteria()
                 for v in rel_id:            
@@ -71,8 +76,7 @@ class GLPIItem(object):
                         value=v,
                         searchtype=GLPISearchCriteria.SEARCH_TYPE_EQUALS,
                     )  
-                ret = self.glpi.__getattribute__(key).filter(criteria=criteria)
-            
+                return self.glpi.__getattribute__(key).filter(criteria=criteria)            
         return ret
 
     def __setattr__(self, key, value):
@@ -176,7 +180,6 @@ class GLPI(object):
         self.calendars = SearchItemManager('Calendar', self,)
         self._session = None
 
-
     def _get_session(self):
         if not self._session:
             url_init_session = self.url_rest + "/initSession"
@@ -190,8 +193,7 @@ class GLPI(object):
             result = json.loads(resp.text)
             if isinstance(result, list):
                 raise GLPISessionErrorException(result[1])
-            _session_token = result['session_token']
-            
+            _session_token = result['session_token']            
             self._session.headers.update({'Session-Token': _session_token})
         return self._session
 
@@ -209,10 +211,12 @@ class GLPI(object):
         resp = s.send(prepped,verify=False)
         result = json.loads(resp.text)        
         return result
+
     def _debug(self, text):
         if self.debug:
             print("\n")
-            print(text)
+            print(text)  
+
 
 class GLPIException(Exception):
     pass
