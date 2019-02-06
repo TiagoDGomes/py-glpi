@@ -43,6 +43,7 @@ class GLPIItem(object):
         self.item_type = item_type
         self._f_filter = f_filter
         self._updated = False
+        
 
     def __getattr__(self, key):
         if self._f_filter and not self._updated:
@@ -89,7 +90,10 @@ class GLPIItem(object):
 
     def save(self):
         data = {'input': self.save_data}
-        result = self.glpi._get_json('/{key}/{item_id}'.format(key=self.item_type, item_id=self.id,), 'PUT', data)
+        if self.id:
+            result = self.glpi._get_json('/{key}/{item_id}'.format(key=self.item_type, item_id=self.id,), 'PUT', data)
+        else:
+            result = self.glpi._get_json('/{key}/'.format(key=self.item_type, ), 'POST', data)
         if isinstance(result, list):
             if 'message' in result[0] and result[0]['message'] != '':
                 raise GLPIException(result[0]['message']) 
@@ -105,6 +109,9 @@ class SearchItemManager(object):
         self.fields = fields
         self.fields.update(FIELDS_SEARCH_COMMON)
         self.all_fields.update(fields)
+    
+    def create(self):
+        return GLPIItem({'id': None}, self.glpi, self.item_type, f_filter=True)
 
     def _get_forcedisplay(self):        
         forcedisplay = ''
