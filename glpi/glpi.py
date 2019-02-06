@@ -99,7 +99,7 @@ class GLPIItem(object):
                 raise GLPIException(result[0]['message']) 
 
 
-class SearchItemManager(object):
+class GPIMultipleItem(object):
     item_type = None
     glpi = None
     all_fields = FIELDS_SEARCH_COMMON.copy()
@@ -142,7 +142,7 @@ class SearchItemManager(object):
                 forcedisplay=self._get_forcedisplay(),
                 )
             )
-        self.glpi._debug("\nSearchItemManager.filter: {0}".format(str(result)))
+        self.glpi._debug("\nGPIMultipleItem.filter: {0}".format(str(result)))
         
         if raw_data:
             return result
@@ -159,11 +159,11 @@ class SearchItemManager(object):
 
     def get(self, item_id, raw_data=False,):
         result = self.glpi._get_json('/{key}/{item_id}'.format(key=self.item_type, item_id=item_id,) )
-        self.glpi._debug("\nSearchItemManager.get:  {0}".format(str(result)))
+        self.glpi._debug("\nGPIMultipleItem.get:  {0}".format(str(result)))
         if raw_data:
             return result
         if isinstance(result, list):
-            self.glpi._debug("\nSearchItemManager.get Error: " + str(result[1]))
+            self.glpi._debug("\nGPIMultipleItem.get Error: " + str(result[1]))
             raise GLPIException(result[1]) 
         r = GLPIItem(result, self.glpi, self.item_type, f_filter=False)
         return r
@@ -175,16 +175,16 @@ class GLPI(object):
         self.url_rest = url_rest
         self.user_token = user_token
         self.app_token = app_token
-        self.tickets = SearchItemManager('Ticket', self,FIELDS_SEARCH_TICKET)
-        self.computers = SearchItemManager('Computer', self, FIELDS_SEARCH_COMPUTER)
-        self.states = SearchItemManager('State', self,)
-        self.locations = SearchItemManager('Location', self,)
-        self.domains = SearchItemManager('Domain', self,)
-        self.manufacturers = SearchItemManager('Manufacturer', self,)
-        self.computermodels = SearchItemManager('ComputerModel', self,)
-        self.networks = SearchItemManager('Network', self,)
-        self.entities = SearchItemManager('Entity', self,)
-        self.calendars = SearchItemManager('Calendar', self,)
+        self.tickets = GPIMultipleItem('Ticket', self,FIELDS_SEARCH_TICKET)
+        self.computers = GPIMultipleItem('Computer', self, FIELDS_SEARCH_COMPUTER)
+        self.states = GPIMultipleItem('State', self,)
+        self.locations = GPIMultipleItem('Location', self,)
+        self.domains = GPIMultipleItem('Domain', self,)
+        self.manufacturers = GPIMultipleItem('Manufacturer', self,)
+        self.computermodels = GPIMultipleItem('ComputerModel', self,)
+        self.networks = GPIMultipleItem('Network', self,)
+        self.entities = GPIMultipleItem('Entity', self,)
+        self.calendars = GPIMultipleItem('Calendar', self,)
         self._session = None
 
     def _get_session(self):
@@ -254,12 +254,12 @@ class GLPISearchCriteria(object):
     ITEM_TYPE_ENTITY = 'Entity'
     ITEM_TYPE_CALENDAR = 'Calendar'
 
-    def __init__(self, logical_operator=None, itemtype=None, searchtype=None, value=None, field=SearchItemManager.all_fields['name']):
+    def __init__(self, logical_operator=None, itemtype=None, searchtype=None, value=None, field=GPIMultipleItem.all_fields['name']):
         self.rules = []
         if logical_operator and itemtype and searchtype and value:
             self.add_rule(logical_operator, itemtype, searchtype, value, field)        
         
-    def add_rule(self, logical_operator, itemtype, searchtype, value, field=SearchItemManager.all_fields['name']):
+    def add_rule(self, logical_operator, itemtype, searchtype, value, field=GPIMultipleItem.all_fields['name']):
         self.rules.append({
             'link': logical_operator,
             'itemtype': itemtype,
