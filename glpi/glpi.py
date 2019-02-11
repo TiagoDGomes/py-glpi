@@ -43,7 +43,14 @@ class GLPIItem(object):
         self.item_type = item_type
         self._f_filter = f_filter
         self._updated = False
-        
+    
+    def subitem(self, key):
+        link = [x for x in self.links if x['rel'] == key]
+        if len(link) == 0:
+            raise GLPIException('Subitem {0} not found'.format(key))
+        href = link[0]['href']
+        print(href)
+        return self.glpi._get_json('/{0}/{1}/{2}/'.format(self.item_type, self.id, key))  
 
     def __getattr__(self, key):
         if self._f_filter and not self._updated:
@@ -185,6 +192,7 @@ class GLPI(object):
         self.networks = GPIMultipleItem('Network', self,)
         self.entities = GPIMultipleItem('Entity', self,)
         self.calendars = GPIMultipleItem('Calendar', self,)
+        self.networkports = GPIMultipleItem('NetworkPort', self,)
         self._session = None
 
     def _get_session(self):
@@ -279,3 +287,4 @@ class GLPISearchCriteria(object):
 
     def __str__(self):
         return str(self.rules)
+   
